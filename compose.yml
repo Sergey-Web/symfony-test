@@ -1,0 +1,85 @@
+services:
+  nginx:
+    build: api/docker/dev/nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./api:/app
+    depends_on:
+      - php-fpm
+
+  php-cli:
+    build: api/docker/dev/php-cli
+    restart: unless-stopped
+    volumes:
+      - ./api:/app
+    depends_on:
+      - mysql
+      - postgres
+      - redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  php-fpm:
+    build: api/docker/dev/php-fpm
+    restart: unless-stopped
+    volumes:
+      - ./api:/app
+    depends_on:
+      - mysql
+      - postgres
+      - redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  mysql:
+    build: api/docker/dev/mysql
+    restart: always
+    ports:
+      - "33061:3306"
+    environment:
+      MYSQL_DATABASE: mysql
+      MYSQL_USER: mysql
+      MYSQL_PASSWORD: mysql
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_INIT_COMMAND: "SET GLOBAL host_cache_size=0"
+    volumes:
+      - mysql:/var/lib/mysql
+
+  postgres:
+    image: postgres:17.1-alpine
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    ports:
+      - "54321:5432"
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - '8888:8080'
+
+  redis:
+    image: redis:6.2
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis:/data
+
+volumes:
+  mysql:
+  postgres:
+  redis:
+
+networks:
+  default:
+    driver: bridge
