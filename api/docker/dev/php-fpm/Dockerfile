@@ -1,23 +1,38 @@
 FROM php:8.3-fpm-alpine3.20
 
-ENV XDEBUG_VERSION 3.3.1
+ENV PHP_IDE_CONFIG="serverName=docker"
 
-RUN apk add --no-cache postgresql-dev fcgi git linux-headers \
-    && docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
-    && git clone --branch $XDEBUG_VERSION --depth 1 https://github.com/xdebug/xdebug.git /usr/src/php/ext/xdebug \
-    && docker-php-ext-configure xdebug --enable-xdebug-dev \
-    && docker-php-ext-install pdo_pgsql xdebug \
-    && apk del git linux-headers
+RUN set -eux \
+    && apk add --no-cache \
+        icu-libs \
+        libintl \
+        make \
+    && rm -rf /usr/local/etc/php/php.ini* /usr/local/etc/php-fpm.d/* /var/www/*
 
-RUN mv $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
+RUN set -eux \
+    && apk add --no-cache --virtual .build-deps \
+        autoconf \
+        g++ \
+        icu-dev \
+        linux-headers \
+        zlib-dev \
+    && docker-php-ext-install -j$(nproc) intl \
+    && docker-php-ext-configure pdo_mysql --with-zlib-dir=/usr \
+    && docker-php-ext-install -j$(nproc) pdo_mysql \
+    && pecl install redis-6.1.0 \
+    && docker-php-ext-enable redis \
+    && pecl install xdebug-3.3.2 \
+    && echo ";zend_extension=xdebug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && find "$(php-config --extension-dir)" -name "*.so" -type f -exec strip --strip-all {} \; \
+    && docker-php-source delete \
+    && apk del .build-deps \
+    && rm -rf /tmp/* /usr/src/* /var/cache/apk/* /var/tmp/*
 
-COPY files/php/php.ini /usr/local/etc/php/php.ini
-COPY files/php/conf.d/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
-COPY files/php-fpm.d/www.conf /usr/local/etc/php-fpm.d/www.conf
-COPY files/php-fpm.conf /usr/local/etc/php-fpm.conf
+COPY conf.d/php.ini /usr/local/etc/php/php.ini
+COPY conf.d/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+COPY conf.d/www.conf /usr/local/etc/php-fpm.d/www.conf
+COPY conf.d/php-fpm.conf /usr/local/etc/php-fpm.conf
 
 WORKDIR /app
 
-HEALTHCHECK --interval=5s --timeout=3s --start-period=1s \
-    CMD REDIRECT_STATUS=true SCRIPT_NAME=/ping SCRIPT_FILENAME=/ping REQUEST_METHOD=GET \
-    cgi-fcgi -bind -connect 127.0.0.1:9000 || exit 1
+CMD ["php-fpm"]

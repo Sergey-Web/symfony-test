@@ -14,12 +14,10 @@ services:
     restart: unless-stopped
     volumes:
       - ./api:/app
+      - composer:/root/.composer/cache
     depends_on:
       - mysql
-      - postgres
       - redis
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   php-fpm:
     build: api/docker/dev/php-fpm
@@ -28,44 +26,28 @@ services:
       - ./api:/app
     depends_on:
       - mysql
-      - postgres
       - redis
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   mysql:
     build: api/docker/dev/mysql
-    restart: always
+    restart: unless-stopped
     ports:
       - "33061:3306"
     environment:
-      MYSQL_DATABASE: mysql
-      MYSQL_USER: mysql
-      MYSQL_PASSWORD: mysql
-      MYSQL_ROOT_PASSWORD: mysql
-      MYSQL_ROOT_HOST: "%"
-      MYSQL_INIT_COMMAND: "SET GLOBAL host_cache_size=0"
+      MYSQL_ROOT_PASSWORD: symfony
+      MYSQL_DATABASE: symfony
+      MYSQL_USER: symfony
+      MYSQL_PASSWORD: symfony
     volumes:
       - mysql:/var/lib/mysql
 
-  postgres:
-    image: postgres:17.1-alpine
+  phpmyadmin:
+    image: phpmyadmin:latest
     restart: always
-    shm_size: 128mb
+    ports:
+      - '8888:80'
     environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
-    volumes:
-      - postgres:/var/lib/postgresql/data
-    ports:
-      - "54321:5432"
-
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - '8888:8080'
+      - PMA_ARBITRARY=1
 
   redis:
     image: redis:6.2
@@ -76,10 +58,6 @@ services:
       - redis:/data
 
 volumes:
+  composer:
   mysql:
-  postgres:
   redis:
-
-networks:
-  default:
-    driver: bridge

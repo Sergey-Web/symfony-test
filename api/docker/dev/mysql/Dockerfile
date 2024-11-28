@@ -1,3 +1,3 @@
-FROM mysql:8.0.40
+FROM percona:8.0.36-28
 
-COPY conf.d/my.cnf /etc/mysql/my.cnf
+CMD ["mysqld"]
