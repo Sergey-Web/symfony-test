@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\CompanyRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
+#[ORM\Table(name: 'companies')]
 #[ORM\Entity(repositoryClass: CompanyRepository::class)]
 class Company
 {
@@ -40,6 +38,30 @@ class Company
     public function setName(string $name): self
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    public function getCountryId(): ?int
+    {
+        return $this->countryId;
+    }
+
+    public function setCountryId(?int $countryId): self
+    {
+        $this->countryId = $countryId;
+
+        return $this;
+    }
+
+    public function getCityId(): ?int
+    {
+        return $this->cityId;
+    }
+
+    public function setCityId(?int $cityId): self
+    {
+        $this->cityId = $cityId;
 
         return $this;
     }

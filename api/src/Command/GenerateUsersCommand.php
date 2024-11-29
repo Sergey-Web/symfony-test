@@ -2,7 +2,10 @@
 
 namespace App\Command;
 
+use App\Entity\Company;
 use App\Entity\User;
+use DateTimeImmutable;
+use Doctrine\DBAL\Exception;
 use Random\RandomException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -36,9 +39,12 @@ class GenerateUsersCommand extends Command
 
     /**
      * @throws RandomException
+     * @throws \DateMalformedStringException
+     * @throws Exception
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $connection = $this->entityManager->getConnection();
         $names = [
             "Alexander", "Olivia", "Ethan", "Sophia", "Liam", "Isabella", "Mason", "Mia",
             "Jacob", "Charlotte", "Michael", "Amelia", "Benjamin", "Harper", "Elijah", "Evelyn",
@@ -54,19 +60,45 @@ class GenerateUsersCommand extends Command
             "Connor", "Natalie", "Asher", "Zoe", "Isaiah", "Leah", "Thomas", "Hazel"
         ];
 
-        for ($i = 0; $i < 10; $i++) { // Создаем 10 пользователей
-            $user = new User();
-            $user->setFirstName(random_int(0, count($names)));
-            $user->setLastName();
-            $user->setAge(random_int(18, 80));
-            $user->setBirthday($faker->dateTimeBetween('-80 years', '-18 years'));
+        $batchSize = 1000;
+        $insertValues = [];
+        $counter = 0;
 
-            $this->entityManager->persist($user);
+        for ($i = 0; $i < 1000000; $i++) {
+            $age = random_int(18, 80);
+            $name = $names[random_int(0, count($names) - 1)];
+            $lastName = bin2hex(random_bytes(5));
+            $gender = $age % 2 === 0 ? "male" : "female";
+            $birthday = (new \DateTimeImmutable())->modify("-{$age} years")->format('Y-m-d');
+            $cityId = random_int(1, 4079);
+            $countryId = random_int(1, 239);
+            $companyId = random_int(1, 1000);
+
+            $insertValues[] = "('$name', '$lastName', $age, '$gender', '$birthday', $cityId, $countryId, $companyId)";
+            $counter++;
+
+            $memoryUsage = memory_get_usage(true); // Потребление памяти в байтах (округлённое до ближайшего блока)
+            $output->writeln('Memory usage: ' . round($memoryUsage / 1024 / 1024, 2) . ' MB');
+
+            if ($counter === $batchSize) {
+                $sql = "INSERT INTO users (first_name, last_name, age, gender, birthday, city_id, country_id, company_id) VALUES " . implode(', ', $insertValues);
+                $connection->executeStatement($sql);
+
+                $insertValues = [];
+                $counter = 0;
+
+                $output->writeln("Inserted 1000 users successfully.");
+            }
         }
 
-        $this->entityManager->flush();
+        if (!empty($insertValues)) {
+            $sql = "INSERT INTO users (first_name, last_name, age, gender, birthday, city_id, country_id, company_id) VALUES " . implode(', ', $insertValues);
+            $connection->executeStatement($sql);
+            $output->writeln("Inserted remaining users successfully.");
+        }
 
-        $output->writeln('10 users generated successfully!');
+        $output->writeln("1000000 users generated successfully!");
+
         return Command::SUCCESS;
     }
 }
