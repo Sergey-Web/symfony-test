@@ -1,19 +1,16 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Entity;
 
-use App\Repository\CompanyRepository;
+use App\Repository\SchoolRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Table(name: 'companies')]
-#[ORM\Entity(repositoryClass: CompanyRepository::class)]
-class Company
+#[ORM\Entity(repositoryClass: SchoolRepository::class)]
+class School
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'integer')]
+    #[ORM\Column]
     private ?int $id = null;
 
     #[ORM\Column(type: 'integer')]

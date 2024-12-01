@@ -1,19 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Command;
 
-use App\Entity\Company;
-use App\Entity\User;
+use App\Service\PdoClient;
 use DateTimeImmutable;
 use Doctrine\DBAL\Exception;
+use PDO;
 use Random\RandomException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Doctrine\ORM\EntityManagerInterface;
 
 #[AsCommand(
     name: 'app:generate-users',
@@ -21,20 +20,14 @@ use Doctrine\ORM\EntityManagerInterface;
 )]
 class GenerateUsersCommand extends Command
 {
-    private EntityManagerInterface $entityManager;
+    private PDO $pdo;
+    private int $count = 1000000;
+    private int $batchSize = 1000;
 
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(PdoClient $pdo)
     {
         parent::__construct();
-        $this->entityManager = $entityManager;
-    }
-
-    protected function configure(): void
-    {
-        $this
-            ->addArgument('arg1', InputArgument::OPTIONAL, 'Argument description')
-            ->addOption('option1', null, InputOption::VALUE_NONE, 'Option description')
-        ;
+        $this->pdo = $pdo->getConnection();
     }
 
     /**
@@ -44,7 +37,6 @@ class GenerateUsersCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $connection = $this->entityManager->getConnection();
         $names = [
             "Alexander", "Olivia", "Ethan", "Sophia", "Liam", "Isabella", "Mason", "Mia",
             "Jacob", "Charlotte", "Michael", "Amelia", "Benjamin", "Harper", "Elijah", "Evelyn",
@@ -60,16 +52,18 @@ class GenerateUsersCommand extends Command
             "Connor", "Natalie", "Asher", "Zoe", "Isaiah", "Leah", "Thomas", "Hazel"
         ];
 
-        $batchSize = 1000;
+        $this->pdo->beginTransaction();
+        $sql = "INSERT INTO users (first_name, last_name, age, gender, birthday, city_id, country_id, company_id) VALUES ";
+
         $insertValues = [];
         $counter = 0;
 
-        for ($i = 0; $i < 1000000; $i++) {
+        for ($i = 0; $i < $this->count; $i++) {
             $age = random_int(18, 80);
             $name = $names[random_int(0, count($names) - 1)];
             $lastName = bin2hex(random_bytes(5));
             $gender = $age % 2 === 0 ? "male" : "female";
-            $birthday = (new \DateTimeImmutable())->modify("-{$age} years")->format('Y-m-d');
+            $birthday = (new DateTimeImmutable())->modify("-{$age} years")->format('Y-m-d');
             $cityId = random_int(1, 4079);
             $countryId = random_int(1, 239);
             $companyId = random_int(1, 1000);
@@ -77,28 +71,27 @@ class GenerateUsersCommand extends Command
             $insertValues[] = "('$name', '$lastName', $age, '$gender', '$birthday', $cityId, $countryId, $companyId)";
             $counter++;
 
-            $memoryUsage = memory_get_usage(true); // Потребление памяти в байтах (округлённое до ближайшего блока)
-            $output->writeln('Memory usage: ' . round($memoryUsage / 1024 / 1024, 2) . ' MB');
-
-            if ($counter === $batchSize) {
-                $sql = "INSERT INTO users (first_name, last_name, age, gender, birthday, city_id, country_id, company_id) VALUES " . implode(', ', $insertValues);
-                $connection->executeStatement($sql);
-
+            if ($counter === $this->batchSize) {
+                $this->executeInsert($sql, $insertValues);
+                $output->writeln("Inserted {$this->batchSize} users successfully.");
                 $insertValues = [];
                 $counter = 0;
-
-                $output->writeln("Inserted 1000 users successfully.");
             }
         }
 
         if (!empty($insertValues)) {
-            $sql = "INSERT INTO users (first_name, last_name, age, gender, birthday, city_id, country_id, company_id) VALUES " . implode(', ', $insertValues);
-            $connection->executeStatement($sql);
-            $output->writeln("Inserted remaining users successfully.");
+            $this->executeInsert($sql, $insertValues);
         }
 
-        $output->writeln("1000000 users generated successfully!");
+        $this->pdo->commit();
+        $output->writeln("{$this->count} users generated successfully!");
 
         return Command::SUCCESS;
+    }
+
+    private function executeInsert(string $sql, array $values): void
+    {
+        $query = $sql . implode(', ', $values);
+        $this->pdo->exec($query);
     }
 }

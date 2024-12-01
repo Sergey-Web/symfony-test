@@ -22,3 +22,10 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+    App\Service\PdoClient:
+        arguments:
+            $host: '%env(MYSQL_DB_HOST)%'
+            $port: '%env(int:MYSQL_DB_PORT)%'
+            $dbname: '%env(MYSQL_DB_NAME)%'
+            $user: '%env(MYSQL_DB_USER)%'
+            $password: '%env(MYSQL_DB_PASSWORD)%'

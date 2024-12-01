@@ -50,7 +50,7 @@ services:
       - PMA_ARBITRARY=1
 
   redis:
-    image: redis:6.2
+    image: redis:latest
     restart: unless-stopped
     ports:
       - "6379:6379"

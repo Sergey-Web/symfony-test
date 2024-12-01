@@ -1,19 +1,16 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Entity;
 
-use App\Repository\CompanyRepository;
+use App\Repository\MuseumRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Table(name: 'companies')]
-#[ORM\Entity(repositoryClass: CompanyRepository::class)]
-class Company
+#[ORM\Entity(repositoryClass: MuseumRepository::class)]
+class Museum
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'integer')]
+    #[ORM\Column]
     private ?int $id = null;
 
     #[ORM\Column(type: 'integer')]
@@ -29,6 +26,7 @@ class Company
     {
         return $this->id;
     }
+
 
     public function getName(): ?string
     {

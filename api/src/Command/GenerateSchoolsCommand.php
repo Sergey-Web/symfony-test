@@ -2,25 +2,19 @@
 
 namespace App\Command;
 
-use App\Entity\Company;
-use App\Entity\User;
 use App\Service\PdoClient;
-use Doctrine\ORM\EntityManagerInterface;
 use PDO;
 use Random\RandomException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'app:generate-companies',
+    name: 'app:generate-schools',
     description: 'Add a short description for your command',
 )]
-class GenerateCompaniesCommand extends Command
+class GenerateSchoolsCommand extends Command
 {
     private PDO $pdo;
     private int $count = 100000;
@@ -38,7 +32,7 @@ class GenerateCompaniesCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->pdo->beginTransaction();
-        $table = 'companies';
+        $table = 'schools';
         $sql = "INSERT INTO {$table} (country_id, city_id, name) VALUES ";
 
         $insertValues = [];
