@@ -20,6 +20,10 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
+    App\Controller\:
+        resource: '../src/Controller'
+        tags: [ 'controller.service_arguments' ]
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
     App\Service\PdoClient:
@@ -29,3 +33,12 @@ services:
             $dbname: '%env(MYSQL_DB_NAME)%'
             $user: '%env(MYSQL_DB_USER)%'
             $password: '%env(MYSQL_DB_PASSWORD)%'
+
+    App\Service\Universal:
+        arguments:
+            $connection: '@doctrine.dbal.default_connection'
+
+    Redis:
+        class: Redis
+        calls:
+            - [ connect, [ '%env(REDIS_HOST)%', '%env(REDIS_PORT)%' ] ]
