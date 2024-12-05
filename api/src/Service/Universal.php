@@ -77,80 +77,59 @@ class Universal
         'name' => 'countries_name'
     ];
 
-    private Connection $connection;
-
-    public function __construct(Connection $connection)
-    {
-        $this->connection = $connection;
+    public function __construct(
+        private readonly Connection $connection,
+        private readonly Layer $layer,
+    ){
     }
 
     /**
      * @throws Exception
      */
-    public function getDataStatistic(array $columns, array $groups)
+    public function getDataStatistic()
     {
-        $queryBuilder = $this->connection->createQueryBuilder();
-        $queryBuilder = $this->setFrom($queryBuilder, $groups);
-        $queryBuilder = $this->setJoins($queryBuilder, $groups);
-        $queryBuilder = $this->setSelect($queryBuilder, $groups, $columns);
+        $batchSize = 1000;
+        $lastId = 0;
 
-        var_dump($queryBuilder->getSQL());die;
+        while (true) {
+            $queryBuilder = $this->connection->createQueryBuilder()
+                ->from('users')
+                ->select(
+                    'users.id as users__id',
+                    'users.first_name as users__first_name',
+                    'users.last_name as users__last_name',
+                    'users.country_id as users__country_id',
+                    'users.city_id as users__city_id',
+                    'users.gender as users__gender',
+                    'users.age as users__age',
+                    'users.company_id as users__company_id',
+                    'country.id as country__id',
+                    'country.Code as country__code',
+                    'country.Name as country__name',
+                    'country.Region as country__region',
+                    'country.Continent as country__continent',
+                    'city.id as city__id',
+                    'city.Name as city__name',
+                    'city.CountryCode as city__country_code',
+                    'city.Population as city__population',
+                    'companies.id as companies__id',
+                    'companies.name as companies__name',
+                    'companies.country_id as companies__country_id',
+                    'companies.city_id as companies__city_id'
+                )
+                ->join('users', 'country', 'country', 'country.id = users.country_id')
+                ->join('users', 'city', 'city', 'city.id = users.city_id')
+                ->join('users', 'companies', 'companies', 'companies.id = users.company_id')
+                ->where('users.id > ?')
+                ->setParameter(0, $lastId)
+                ->setMaxResults($batchSize);
 
-//        return $queryBuilder->executeQuery()->fetchAllAssociative();
-    }
+            $result = $queryBuilder->executeQuery()->iterateAssociative();
 
-    private function setFrom(
-        QueryBuilder $queryBuilder,
-        array $groups,
-    ): QueryBuilder {
-        $firstGroup = static::GROUPS[$groups[0]] ?? null;
+            $this->layer->save($result, ['users', 'city', 'country', 'companies']);
 
-        if (empty($firstGroup)) {
-            throw new Exception('Group not found');
+            // Обновляем $lastId на значение последнего id в текущей партии
+            $lastId = end($result)['users__id'];
         }
-
-        return $queryBuilder->from($firstGroup, $firstGroup);
-    }
-
-    private function setJoins(QueryBuilder $queryBuilder, array $groups): QueryBuilder
-    {
-        if (!empty($groups)) {
-            foreach ($groups as $key => $group) {
-                if ($key === 0) {
-                    continue;
-                }
-
-                $firstTable = $groups[$key-1];
-//var_dump($firstTable . '.id = ' . $group . '.' . $firstTable . '_id');die;
-                $queryBuilder->innerJoin($firstTable, $group, $group, $firstTable . '.id = ' . $group . '.' . $firstTable . '_id');
-            }
-        }
-
-        return $queryBuilder;
-    }
-
-    private function setSelect(
-        QueryBuilder $queryBuilder,
-        array $groups,
-        array $columns
-    ): QueryBuilder
-    {
-        $fields = '';
-        if (!empty($columns) && !empty($groups)) {
-            foreach ($groups as $group) {
-                $fields .= static::GROUPS[$group] . '.id AS ' . $group . '__id, ';
-                foreach ($columns as $column) {
-                    if (empty(static::FIELDS[$group][$column])) {
-                        continue;
-                    }
-                    $fields .= static::FIELDS[$group][$column] . ', ';
-                }
-            }
-            $queryBuilder->select(rtrim($fields, ', '));
-        } else {
-            $queryBuilder->select('*');
-        }
-
-        return $queryBuilder;
     }
 }

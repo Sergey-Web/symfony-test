@@ -37,6 +37,11 @@ services:
     App\Service\Universal:
         arguments:
             $connection: '@doctrine.dbal.default_connection'
+            $layer: '@App\Service\Layer'
+
+    App\Service\Layer:
+        arguments:
+            $redisClient: '@Redis'
 
     Redis:
         class: Redis
