@@ -6,7 +6,6 @@ namespace App\Controller;
 
 use App\Service\Layer;
 use App\Service\Universal;
-use Redis;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -41,6 +40,6 @@ class RoiController
     {
         $data = $this->layer->getRecord($userId, $layer, $id);
 
-        return new JsonResponse($data);
+        return new JsonResponse(iterator_to_array($data));
     }
 }

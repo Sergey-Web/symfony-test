@@ -112,14 +112,9 @@ class Universal
                     'city.Name as city__name',
                     'city.CountryCode as city__country_code',
                     'city.Population as city__population',
-                    'companies.id as companies__id',
-                    'companies.name as companies__name',
-                    'companies.country_id as companies__country_id',
-                    'companies.city_id as companies__city_id'
                 )
                 ->join('users', 'country', 'country', 'country.id = users.country_id')
-                ->join('users', 'city', 'city', 'city.id = users.city_id')
-                ->join('users', 'companies', 'companies', 'companies.id = users.company_id')
+                ->join('users', 'city', 'city', 'city.CountryCode = country.Code')
                 ->where('users.id > ?')
                 ->setParameter(0, $lastId)
                 ->setMaxResults($batchSize);
@@ -132,7 +127,7 @@ class Universal
 
             $cycle += $batchSize;
 
-            $this->layer->save($result, ['users', 'city', 'country', 'companies']);
+            $this->layer->save($result, ['users', 'country', 'city']);
         } while (count($result) > 0 && $cycle < 100000);
     }
 }

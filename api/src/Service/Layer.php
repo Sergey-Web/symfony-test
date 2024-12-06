@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use Generator;
-use Iterator;
 use Redis;
 
 final class Layer
@@ -23,7 +21,16 @@ final class Layer
 
     public function getRecord(string $userId, string $layer, string $id)
     {
-        return $this->redisClient->get("roi:{$userId}:{$layer}:{$id}");
+        $pattern = Layer::NAME_DB . ":{$userId}:{$layer}:{$id}";
+        $iterator = null;
+
+        while (($keys = $this->redisClient->scan($iterator, $pattern)) !== false) {
+            $values = $this->redisClient->mget($keys);
+
+            foreach ($keys as $index => $key) {
+                yield $key => $values[$index];
+            }
+        }
     }
 
     public function getLayer(string $userId, string $layer)
