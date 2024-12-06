@@ -8,7 +8,6 @@ namespace App\Service;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
-use Doctrine\DBAL\Query\QueryBuilder;
 
 class Universal
 {
@@ -90,8 +89,9 @@ class Universal
     {
         $batchSize = 1000;
         $lastId = 0;
+        $cycle = 0;
 
-        while (true) {
+        do {
             $queryBuilder = $this->connection->createQueryBuilder()
                 ->from('users')
                 ->select(
@@ -124,12 +124,15 @@ class Universal
                 ->setParameter(0, $lastId)
                 ->setMaxResults($batchSize);
 
-            $result = $queryBuilder->executeQuery()->iterateAssociative();
+            $result = $queryBuilder->executeQuery()->fetchAllAssociative();
+
+            if (!empty($result)) {
+                $lastId = end($result)['users__id'];
+            }
+
+            $cycle += $batchSize;
 
             $this->layer->save($result, ['users', 'city', 'country', 'companies']);
-
-            // Обновляем $lastId на значение последнего id в текущей партии
-            $lastId = end($result)['users__id'];
-        }
+        } while (count($result) > 0 && $cycle < 100000);
     }
 }
