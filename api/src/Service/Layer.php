@@ -23,16 +23,11 @@ readonly class Layer
     {
         $result = [];
         foreach ($data as $item) {
-            $result = $this->groupDataByLayers($item, $layers);
+            $result[] = $this->preparingDataForStorage($item, $layers);
         }
-        echo '<pre>';
-        var_dump(iterator_to_array($result));die;
-//        foreach ($layers as $layer) {
-//
-//        }
     }
 
-    private function groupDataByLayers(array $data, array $layers)
+    private function preparingDataForStorage(array $data, array $layers)
     {
         $result = [];
         foreach ($data as $key => $item) {
@@ -40,6 +35,18 @@ readonly class Layer
             $result[$layers[array_search($tableData[0], $layers)]][$tableData[1]] = $item;
         }
 
-        var_dump($result);die;
+        return array_keys($result);
+    }
+
+    private function saveBatch(array $data): void
+    {
+        $pipeline = $this->redisClient->multi(Redis::PIPELINE);
+
+        foreach ($data as $id => $value) {
+            $key = static::NAME_DB . ':' . static::USER_ID . ':' . $value['id'] . ':' . $value;
+            $pipeline->set($key, json_encode($value));
+        }
+
+        $pipeline->exec();
     }
 }

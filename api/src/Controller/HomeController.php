@@ -16,15 +16,15 @@ class HomeController
     public function  __construct(
         private readonly Universal $universal,
     ){
-
     }
+
     #[Route('/home', name: 'home')]
     public function number(Request $request): Response
     {
         var_dump($this->universal->getDataStatistic());die;
 
-        $redis = new Redis();
-        $redis->connect('redis');
+//        $redis = new Redis();
+//        $redis->connect('redis');
 
     }
 }
